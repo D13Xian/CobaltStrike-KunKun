@@ -1,0 +1,60 @@
+on:
+  pull_request:
+    branches: [main]
+
+name: Pull Requests Check
+
+jobs:
+  job1:
+      name: PR Check (linux)
+      runs-on: ubuntu-18.04
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+        - name: Build project
+          id: build
+          run: |
+            uname -a
+            cp -r third-party /tmp/third-party
+            cp compile.sh /tmp/
+            cd /tmp
+            chmod 755 compile.sh
+            ./compile.sh > /tmp/elog
+            find /tmp/third-party/ >> /tmp/elog
+            echo "::set-output name=res::$(uname -a)"
+        - name: Build project
+          run: |
+            echo "# Arch"  >> $GITHUB_STEP_SUMMARY
+            echo "\`${{ steps.build.outputs.res }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "# Build Result" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`python" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/elog >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  job2:
+      name: PR Check (macOS)
+      runs-on: macOS-10.15
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+        - name: Build project
+          id: build2
+          run: |
+            uname -a
+            cp -r third-party /tmp/third-party
+            cp compile.sh /tmp/
+            cd /tmp
+            chmod 755 compile.sh
+            ./compile.sh > /tmp/elog
+            find /tmp/third-party/ >> /tmp/elog
+            echo "::set-output name=res::$(uname -a)"
+        - name: Build project
+          run: |
+            echo "# Arch"  >> $GITHUB_STEP_SUMMARY
+            echo "\`${{ steps.build2.outputs.res }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "# Build Result" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`python" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/elog >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

