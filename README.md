@@ -11,7 +11,7 @@
 ## 2025.3.28
  - 修复profile配置有概率上线失败的问题（现在可使用server/tools/Malleable-C2-Randomizer-master自己随机生成，过两天把c2lint改出来，如果有大牛改出来了麻烦issue一下，感激不尽。）
  - 增加了后渗透自动检测杀软插件、自动维权插件 默认不加载，可使用`java -jar cat_server.jar script [host] [port] [user] [password] [cna脚本]`自己加载。
- - 简单做个静免测一下：
+ - 简单做个静免测一下（截止到今日shellcode还活着QAQ）：
  1. 火绒最新版：
    ![image](https://github.com/user-attachments/assets/ce2db803-2c57-4b52-a4a0-f9e9044a77ad)
  2.360老版但是带晶核（为了不让他传沙箱给他联网权限关了，这里有个trick 360qvm不杀自己图标的马，增加熵也可以做到）
