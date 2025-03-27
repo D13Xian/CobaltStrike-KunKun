@@ -8,11 +8,13 @@
 >
 > 如有bug请在lssues中提出，如果收集到沙箱IP、测绘IP也欢迎在Issues里提出，被分析了也可以在issues里提供截图（注意打码）
 
-
+## 2025.3.28
+ - 修复profile配置有概率上线失败的问题（现在可使用server/tools/Malleable-C2-Randomizer-master自己随机生成，过两天把c2lint改出来，如果有大牛改出来了麻烦issue一下，感激不尽。）
+ - 增加了后渗透自动检测杀软插件、自动维权插件 默认不加载，可使用`java -jar cat_server.jar script [host] [port] [user] [password] [cna脚本]`自己加载。
 
 ## 2025.3.27
-修复 https://github.com/D13Xian/CobaltStrike-KunKun/issues/1
-修复了Version参数转换成浮点数的bug
+ - 修复 https://github.com/D13Xian/CobaltStrike-KunKun/issues/1
+ - 修复了Version参数转换成浮点数的bug
 
 
 
