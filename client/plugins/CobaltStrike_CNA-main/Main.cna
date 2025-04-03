@@ -1,0 +1,32 @@
+@Supports =  ls(script_resource("/Supports/"));
+	println("[*]----Load Supports CNA----");
+	foreach $file (@Supports){ 
+		if(substr($file, -3) eq "cna"){
+			include($file);
+			println("[+] $file");
+		}
+}
+
+@PrivilegeEscalation =  ls(script_resource("/PrivilegeEscalation/"));
+	println("[*]----Load PrivilegeEscalation CNA----");
+	foreach $file (@PrivilegeEscalation){ 
+		if(substr($file, -3) eq "cna"){
+			include($file);
+			println("[+] $file");
+		}
+}
+
+
+popup beacon_bottom {
+	menu "Persistence" {
+		@Persistence =  ls(script_resource("/Persistence/"));
+		println("[*]----Load Persistence CNA----");
+		foreach $file (@Persistence){ 
+			if(substr($file, -3) eq "cna"){
+				include($file);
+				println("[+] $file");
+			}
+			}
+		}
+}
+

