@@ -8,13 +8,11 @@
 >
 > 如有bug请在lssues中提出，如果收集到沙箱IP、测绘IP也欢迎在Issues里提出，被分析了也可以在issues里提供截图（注意打码）
 
+## 更新日志挪到下面了，没有必要的更新日志被我删除了
 
+提交需求请在issues里提交
 
-## 2025.3.27
-修复 https://github.com/D13Xian/CobaltStrike-KunKun/issues/1
-修复了Version参数转换成浮点数的bug
-
-
+**如果在其他渠道提交（微博、博客等）我就狠狠地辱骂你。**
 
 ## 😘致敬原作者
 
@@ -152,6 +150,23 @@ java -jar cat_server.jar script [host] [port] [user] [password] [二次验证的
 
 7.修改默认生成的cobaltstrike.store密码
 
+
+
+## 2025.3.27
+修复 https://github.com/D13Xian/CobaltStrike-KunKun/issues/1
+修复了Version参数转换成浮点数的bug
+
+## 2025.4.3
+完成 https://github.com/D13Xian/CobaltStrike-KunKun/issues/4
+还是保留了英文版本，中文版本可以直接使用cat_client_zh.jar
+
+windows平台测试没问题，mac平台如果出现乱码，java命令行添加-Dfile.encoding=utf-8参数即可。
+
+修改了明亮主题，现在是淡粉色，更护眼。
+
+对于https://github.com/D13Xian/CobaltStrike-KunKun/issues/5
+
+如果我把我现在用的版本推上去肯定会被分析，但是我还是会在今年大型网安联谊活动之前PUSH一版shellcode，联谊活动期间停止更新。
 
 
 ## 👍TODO - star 250+  继续开发以下功能（HVV期间暂停更新）
