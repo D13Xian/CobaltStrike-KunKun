@@ -214,3 +214,7 @@ https://github.com/trustedsec/CS-Situational-Awareness-BOF
 https://github.com/qwqdanchun/Pillager/blob/main/README_ZH.md
 
 https://github.com/lintstar/LSTAR
+
+## 免责声明
+
+使用本程序必循遵守部署免责声明，使用本程序必循遵守部署服务器所在地、所在国家和用户所在国家的法律法规, 程序作者不对使用者任何不当行为负责。
